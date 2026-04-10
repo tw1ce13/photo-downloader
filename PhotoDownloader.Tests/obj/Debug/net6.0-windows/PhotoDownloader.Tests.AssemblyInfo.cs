@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PhotoDownloader.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2a5d092e774b3034cb30de2324b3241da4b23ba7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1516c32069c23116efbad1f3cbbae01806bdf5cb")]
 [assembly: System.Reflection.AssemblyProductAttribute("PhotoDownloader.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PhotoDownloader.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
