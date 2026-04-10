@@ -30,10 +30,12 @@ public partial class App : Application
                 {
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("PhotoDownloader/1.0");
                     client.Timeout = TimeSpan.FromMinutes(30);
-                }).ConfigurePrimaryHttpMessageHandler(static () => new SocketsHttpHandler
-                {
-                    AutomaticDecompression = DecompressionMethods.All,
-                });
+                })
+                    .AddPolicyHandler(HttpRetryPolicies.TransientShortRetry)
+                    .ConfigurePrimaryHttpMessageHandler(static () => new SocketsHttpHandler
+                    {
+                        AutomaticDecompression = DecompressionMethods.All,
+                    });
 
                 services.AddSingleton<MainViewModel>();
                 services.AddSingleton<MainWindow>();
