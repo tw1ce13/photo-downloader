@@ -12,5 +12,17 @@
 /dataSources/
 /dataSources.local.xml
 .idea/
-PhotoDownloader/bin/
-PhotoDownloader/obj/
+
+# Build results (.NET / MSBuild) — любая глубина вложенности
+**/bin/
+**/obj/
+
+# Visual Studio / VS Code
+.vs/
+*.user
+*.userosscache
+*.suo
+
+# NuGet
+*.nupkg
+**/packages/

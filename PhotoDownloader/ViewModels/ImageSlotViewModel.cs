@@ -96,14 +96,19 @@ public partial class ImageSlotViewModel : ObservableObject
             SetSlotProgress(100);
             _logger.LogInformation("Слот {Slot}: загрузка успешно завершена", SlotNumber);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
             StatusMessage = "Остановлено";
             SetSlotProgress(0);
         }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Превышено время ожидания ответа или соединение прервано.";
+            SetSlotProgress(0);
+        }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            StatusMessage = DownloadUserMessage.From(ex);
             SetSlotProgress(0);
         }
         finally
