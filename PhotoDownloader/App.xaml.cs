@@ -4,6 +4,7 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PhotoDownloader.Infrastructure;
+using PhotoDownloader.Options;
 using PhotoDownloader.Services;
 using PhotoDownloader.Services.Implementations;
 using PhotoDownloader.Services.Interfaces;
@@ -23,6 +24,8 @@ public partial class App : Application
             .UseSerilog(SerilogConfiguration.ConfigureHostLogging)
             .ConfigureServices(static (_, services) =>
             {
+                services.AddOptions<ImageDownloadOptions>();
+
                 services.AddHttpClient<IImageDownloadService, ImageDownloadService>(static (_, client) =>
                 {
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("PhotoDownloader/1.0");

@@ -4,7 +4,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using PhotoDownloader.Services;
+using PhotoDownloader.Infrastructure;
 using PhotoDownloader.Services.Interfaces;
 
 namespace PhotoDownloader.ViewModels;
@@ -44,7 +44,9 @@ public partial class ImageSlotViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDownloading;
 
-    /// <summary>Вклад слота в общий прогресс, 0–100.</summary>
+    /// <summary>
+    /// Вклад слота в общий прогресс, 0–100.
+    /// </summary>
     [ObservableProperty]
     private double _slotProgress;
 
@@ -65,17 +67,10 @@ public partial class ImageSlotViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task StartDownloadAsync()
     {
-        if (!Uri.TryCreate(Url.Trim(), UriKind.Absolute, out var uri))
+        if (!ImageUrlValidator.TryValidate(Url, out var uri, out var validationError))
         {
-            _logger.LogWarning("Слот {Slot}: некорректный URL «{Url}»", SlotNumber, Url);
-            StatusMessage = "Некорректный URL";
-            return;
-        }
-
-        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
-        {
-            _logger.LogWarning("Слот {Slot}: схема не http(s) {Scheme}", SlotNumber, uri.Scheme);
-            StatusMessage = "Нужен http или https";
+            _logger.LogWarning("Слот {Slot}: отклонён URL «{Url}» — {Reason}", SlotNumber, Url, validationError);
+            StatusMessage = validationError;
             return;
         }
 

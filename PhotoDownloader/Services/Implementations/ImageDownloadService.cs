@@ -4,23 +4,29 @@ using System.Net.Http;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using PhotoDownloader.Options;
 using PhotoDownloader.Services.Interfaces;
 
 namespace PhotoDownloader.Services.Implementations;
 
 /// <summary>
 /// Реализация загрузки через <see cref="HttpClient"/> с потоковым чтением и отменой.
+/// В продакшене стоит дополнительно ограничить целевые хосты (защита от SSRF при доверенном вводе).
 /// </summary>
 public sealed class ImageDownloadService : IImageDownloadService
 {
-    private const double DownloadWeight = 0.92;
-
     private readonly HttpClient _httpClient;
+    private readonly ImageDownloadOptions _options;
     private readonly ILogger<ImageDownloadService> _logger;
 
-    public ImageDownloadService(HttpClient httpClient, ILogger<ImageDownloadService> logger)
+    public ImageDownloadService(
+        HttpClient httpClient,
+        IOptions<ImageDownloadOptions> options,
+        ILogger<ImageDownloadService> logger)
     {
         _httpClient = httpClient;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -37,12 +43,28 @@ public sealed class ImageDownloadService : IImageDownloadService
 
             response.EnsureSuccessStatusCode();
 
+            var mediaType = response.Content.Headers.ContentType?.MediaType;
+            if (!string.IsNullOrEmpty(mediaType) &&
+                !mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(
+                    "Ответ с неожиданным Content-Type {MediaType} для {Uri} — продолжаем загрузку",
+                    mediaType,
+                    uri);
+            }
+
             var total = response.Content.Headers.ContentLength;
+            if (total is > 0 && total.Value > _options.MaxDownloadBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Размер файла по заголовку ({total.Value} байт) превышает лимит {_options.MaxDownloadBytes} байт.");
+            }
+
             await using var networkStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
 
             var initialCapacity = 64 * 1024;
             if (total is > 0)
-                initialCapacity = (int)Math.Min(int.MaxValue, total.Value);
+                initialCapacity = (int)Math.Min(int.MaxValue, Math.Min(total.Value, _options.MaxDownloadBytes));
 
             await using var buffer = new MemoryStream(initialCapacity);
             var rented = ArrayPool<byte>.Shared.Rent(65536);
@@ -52,9 +74,15 @@ public sealed class ImageDownloadService : IImageDownloadService
                 long readTotal = 0;
                 while ((read = await networkStream.ReadAsync(rented.AsMemory(0, rented.Length), cancellationToken).ConfigureAwait(false)) > 0)
                 {
-                    await buffer.WriteAsync(rented.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                     readTotal += read;
-                    ReportDownloadProgress(progress, readTotal, total);
+                    if (readTotal > _options.MaxDownloadBytes)
+                    {
+                        throw new InvalidOperationException(
+                            $"Превышен максимальный размер загрузки ({_options.MaxDownloadBytes} байт).");
+                    }
+
+                    await buffer.WriteAsync(rented.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    DownloadProgressReporter.Report(progress, readTotal, total);
                 }
             }
             finally
@@ -63,7 +91,7 @@ public sealed class ImageDownloadService : IImageDownloadService
             }
 
             buffer.Position = 0;
-            progress?.Report(DownloadWeight);
+            progress?.Report(DownloadProgressReporter.DownloadWeight);
 
             var image = await Task.Run(() => DecodeBitmap(buffer), cancellationToken).ConfigureAwait(false);
             progress?.Report(1.0);
@@ -86,23 +114,6 @@ public sealed class ImageDownloadService : IImageDownloadService
             _logger.LogError(ex, "Ошибка при получении изображения {Uri}", uri);
             throw;
         }
-    }
-
-    private static void ReportDownloadProgress(IProgress<double>? progress, long readTotal, long? total)
-    {
-        if (progress is null)
-            return;
-
-        if (total is > 0)
-        {
-            var ratio = Math.Min(1.0, (double)readTotal / total.Value);
-            progress.Report(ratio * DownloadWeight);
-            return;
-        }
-
-        // Без Content-Length: плавное приближение к верхней границе фазы загрузки.
-        var estimate = 1.0 - Math.Exp(-readTotal / (5.0 * 1024 * 1024));
-        progress.Report(estimate * DownloadWeight * 0.98);
     }
 
     private static BitmapImage DecodeBitmap(MemoryStream stream)
