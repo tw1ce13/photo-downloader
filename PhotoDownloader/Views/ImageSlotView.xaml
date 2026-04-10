@@ -39,18 +39,16 @@
                     VerticalAlignment="Stretch"
                     Background="{DynamicResource ControlFillColorSecondaryBrush}"
                     CornerRadius="6"
-                    ClipToBounds="True">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto"
-                              Padding="2"
-                              HorizontalAlignment="Stretch"
-                              VerticalAlignment="Stretch">
-                    <Image HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Source="{Binding PreviewImage}"
-                           Stretch="Uniform"
+                    ClipToBounds="True"
+                    Padding="4">
+                <Viewbox Stretch="Uniform"
+                         StretchDirection="DownOnly"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch">
+                    <Image Source="{Binding PreviewImage}"
+                           Stretch="None"
                            RenderOptions.BitmapScalingMode="HighQuality" />
-                </ScrollViewer>
+                </Viewbox>
             </Border>
             
             <ui:TextBox Grid.Row="2"
