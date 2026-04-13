@@ -53,7 +53,11 @@ public partial class ImageSlotViewModel : ObservableObject
     [ObservableProperty]
     private string? _statusMessage;
 
-    partial void OnUrlChanged(string value) => StartDownloadCommand.NotifyCanExecuteChanged();
+    partial void OnUrlChanged(string value)
+    {
+        StartDownloadCommand.NotifyCanExecuteChanged();
+        _onSlotStateChanged();
+    }
 
     partial void OnIsDownloadingChanged(bool value)
     {
