@@ -35,7 +35,9 @@ public partial class MainViewModel : ObservableObject
     public ImageSlotViewModel Slot2 => Slots[1];
     public ImageSlotViewModel Slot3 => Slots[2];
 
-    /// <summary>Средняя доля выполнения по трём слотам, 0–100.</summary>
+    /// <summary>
+    /// Средняя доля выполнения по слотам, где заполнен URL, 0-100.
+    /// </summary>
     [ObservableProperty]
     private double _overallProgress;
 
@@ -68,8 +70,12 @@ public partial class MainViewModel : ObservableObject
 
     private void RefreshOverall()
     {
-        ActiveDownloadCount = Slots.Count(s => s.IsDownloading);
-        OverallProgress = Slots.Average(s => s.SlotProgress);
+        var requestedSlots = Slots.Where(s => !string.IsNullOrWhiteSpace(s.Url)).ToArray();
+
+        ActiveDownloadCount = requestedSlots.Count(s => s.IsDownloading);
+        OverallProgress = requestedSlots.Length == 0
+            ? 0
+            : requestedSlots.Average(s => s.SlotProgress);
         OverallStatusText = $"Активных загрузок: {ActiveDownloadCount}";
     }
 }
